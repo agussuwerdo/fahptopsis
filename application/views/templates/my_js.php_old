@@ -1,0 +1,166 @@
+<html><body>
+<script>
+var site_url 				= "<?= site_url() ?>";
+var site_url_breadcrumb 	= "<?= site_url() ?>";
+var uri_string 				= "<?= preg_replace('/[^a-z0-9]/i', '_', (uri_string())) ?>";
+var n 						= uri_string.lastIndexOf('_');
+var title 					= uri_string.substring(n + 1);
+var a 						= uri_string.split("_"),i;
+var title_list 				= '';
+var breadcrumb 				= '';
+var menu_title = $('#title_'+uri_string).val();
+var menu_description = $('#description_'+uri_string).val();
+var audio = new Audio('<?=base_url()?>assets/sound/pesanan_masuk.mp3');
+var submenu 				= '';
+	for (i = 0; i < a.length; i++) {
+		submenu = a[i]+' ';
+		if(i>0)
+		{
+			title_list += '| ';
+		}
+		if(a.length-1 == i)
+		{
+			site_url_breadcrumb = window.location.href ;
+			submenu				= menu_title;
+		}
+		breadcrumb += '<li class="breadcrumb-item"><a href="'+site_url_breadcrumb+'">'+submenu+'</a></li>';
+		title_list += submenu;
+	}
+	$('#menu_breadcrumb').html(breadcrumb);
+	$('#menu_title').text(menu_description);
+	document.title = "<?=get_myconf('app_name')?>"+' | '+title_list;
+	$(document).ready(function() {
+		if(uri_string!='')
+			{
+				$('#'+uri_string).addClass('active');
+				// $('#'+uri_string).addClass('open');
+				$('#'+uri_string).parents('a').attr("aria-expanded","true");
+				$('#'+uri_string).parents('ul').attr("aria-expanded","true");
+				if(uri_string!='main')
+				{
+					$('#'+uri_string).closest('ul').addClass('collapse in');
+				}
+				$('#'+uri_string).parents('li').addClass('active');
+				// $('#'+uri_string).parents('li').addClass('open');
+			}
+		// setTimeout(function() {
+			// toastr.options = {
+				// closeButton: true,
+				// progressBar: true,
+				// showMethod: 'slideDown',
+				// timeOut: 4000
+			// };
+			// toastr.success('<?=get_myconf('app_name')?>', 'Welcome <?=$this->session->userdata('loginName')?>');
+		// }, 1300);
+		
+		// var socket = io('wss://nodejs.serbasembako.com',{transports: ['websocket']});
+		var socket = io.connect('https://nodejs.serbasembako.com', { 
+			"force new connection": true 
+			, secure: true 
+			, transports : ['polling']
+		});
+		
+		socket.on('notify_new_order',function(data){
+			// console.table(data);
+			if(isset(data['payload']['idNotif']))
+			{
+				if(data['payload']['idReceiver']==0)
+				{
+					//SOUND
+					// var x = document.getElementById("myAudio"); 
+					// x.play(); 
+					
+					audio.play();
+					swal(data['payload']['notifTitle'], data['payload']['notifContent'], "info");
+					getNotify();
+				}
+			}
+				if(uri_string == 'transaksi_pesanan')
+				{
+					if(isset(data['payload']['transNum']))
+					{
+						if(data['payload']['transStatus']!=1)
+						{
+							refreshDataTable();
+						}
+					}
+					if ($.isFunction(window.refreshDataTableDetail)) {
+						refreshDataTableDetail();
+					} 
+				}
+		});
+		
+		// Uncomment on server mode to enable XHR calls
+		// $.get("skin-config.html", function (data) {
+			// if (!$('body').hasClass('no-skin-config'))
+				// $('body').append(data);
+		// });
+		getNotify();
+	});
+	
+	// Minimalize menu
+	$('.navbar-minimalize').click(function () {
+	// save state in local storage 
+		localStorage.setItem('mini-navbar', $('.mini-navbar').is(":visible"));
+		SmoothlyMenu();
+	});
+	// get visibility state from local storage 
+	var miniNavbar = localStorage.getItem('mini-navbar');
+	if(miniNavbar)
+	{
+		if (miniNavbar == 'true') {
+		// console.log('miniNavbar: ' + miniNavbar);
+			$("body").removeClass('mini-navbar');
+			SmoothlyMenu();
+		}else{
+			$("body").addClass('mini-navbar');
+			SmoothlyMenu();
+		}
+	}
+	
+	
+	function quotedStr(str)
+	{
+		return '\''+str+'\'';
+	}
+
+	function modalView(url='',title='',subtitle='',modalsize='lg')
+	{
+		// size : ['sm' | 'lg' | 'xl']
+		var options = {
+			url: site_url+url,
+			title: title,
+			size: modalsize,
+			subtitle: subtitle
+		};
+
+		eModal.ajax(options);
+	}
+	
+	function getNotify()
+	{
+		$.ajax({
+			type: "POST",
+			url: site_url+"main/getNotify/",
+			dataType: 'html',
+			success: function(response)
+			{
+				$('#notify_content').html(response);
+			},
+			error: function( jqXhr, textStatus, errorThrown ){
+				console.log( (textStatus) );
+			}
+	   });
+	}
+	
+	function isset(variable)
+	{
+		return typeof(variable) != "undefined" && variable !== null;
+	}
+	
+</script>
+
+<audio id="myAudio">
+  <source src="assets/sound/pesanan_masuk.mp3" type="audio/mpeg">
+</audio>
+</body></html>
